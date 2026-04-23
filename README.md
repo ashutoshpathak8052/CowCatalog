@@ -1,97 +1,144 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# 🐄 Cow Catalog App
 
-# Getting Started
+A React Native CLI application for managing livestock records. Built as a take-home assignment to demonstrate mobile architecture, local data persistence, and clean UI patterns without a backend.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+---
 
-## Step 1: Start Metro
+## Features
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+| ID    | Feature              | Description                                                  |
+|-------|----------------------|--------------------------------------------------------------|
+| CA-01 | Cow List Screen      | Scrollable list of cows with ear tag, status badge, pen, and last event date |
+| CA-02 | Search & Filters     | Real-time search by ear tag; filter chips for status and pen |
+| CA-03 | Add Cow Screen       | Form with field validation, duplicate ear tag detection, and required field enforcement |
+| CA-04 | Cow Detail Screen    | Full cow profile with a mock event timeline (weight checks, treatments, vaccinations) |
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+---
+
+## Tech Stack
+
+| Layer       | Choice                                      |
+|-------------|---------------------------------------------|
+| Framework   | React Native CLI 0.85 (bare workflow)       |
+| Language    | JavaScript (ES2020+)                        |
+| Navigation  | React Navigation v7 — Stack Navigator       |
+| Storage     | `@react-native-async-storage/async-storage` |
+| Icons       | `react-native-vector-icons` (Ionicons)      |
+| Node        | >= 22.11.0                                  |
+
+---
+
+## Architecture & Approach
+
+```
+src/
+├── components/       # Reusable UI primitives
+│   ├── ChipPicker    # Multi-option filter selector
+│   ├── EmptyState    # Zero-results placeholder
+│   ├── FAB           # Floating action button
+│   ├── FormField     # Labelled input wrapper
+│   └── StatusBadge   # Colour-coded status pill
+├── navigation/       # AppNavigator (Stack config + header options)
+├── screens/          # CowListScreen, AddCowScreen, CowDetailScreen
+├── services/         # cowService — business logic (create, search, filter)
+├── storage/          # cowStorage (AsyncStorage I/O) + mockData seed
+└── utils/            # constants, helpers (generateId), theme tokens
+```
+
+**Separation of concerns:**
+- `storage/` owns all AsyncStorage reads/writes — nothing else touches the storage key directly.
+- `services/` owns business rules (duplicate ear tag check, cow construction) and calls into `storage/`.
+- `screens/` call `services/` only — they never touch AsyncStorage directly.
+- `components/` are fully stateless and reusable across screens.
+
+**State management:** Local `useState` + `useEffect` per screen. No global store was needed given the single-user, offline-only scope. Data is loaded on screen focus and passed down as props.
+
+---
+
+## Design Choices
+
+**React Native CLI over Expo**
+Full control over native modules. `react-native-vector-icons` and `react-native-gesture-handler` require native linking, which is straightforward with CLI and avoids Expo SDK version constraints.
+
+**AsyncStorage**
+Lightweight, zero-config, and ships as a well-maintained community package. Sufficient for a local-only dataset of this size. No SQLite overhead needed.
+
+**Simple UI**
+Intentional. The goal was to demonstrate architecture and data flow, not visual polish. A consistent theme file (`theme.js`) and a small set of reusable components keep the UI coherent without over-engineering it.
+
+**Stack Navigation**
+Linear flow (List → Detail, List → Add) maps naturally to a stack. No tabs or drawers were needed, keeping the navigation config minimal and readable.
+
+---
+
+## Offline Behavior
+
+- On first launch, `MOCK_COWS` seed data is written to AsyncStorage under the key `@cow_catalog`.
+- All subsequent reads pull from AsyncStorage — no network calls are made anywhere in the app.
+- Cows added via the form are appended to the stored array and persist across app restarts.
+- The event timeline on the detail screen uses shared `MOCK_EVENTS` (static) since there is no per-cow event log in this version.
+
+---
+
+## Trade-offs & Assumptions
+
+- **No backend** — all data is device-local. Multi-device sync is out of scope.
+- **Mock timeline** — all cows share the same `MOCK_EVENTS` list. A real implementation would store events per cow ID.
+- **No edit/delete** — read and create only, as per assignment scope.
+- **Validation scope** — ear tag uniqueness and required fields are enforced; no regex format validation on ear tag strings.
+- **No pagination** — the list renders all cows. Acceptable for a small dataset; a production build would use `FlatList` with `onEndReached`.
+
+---
+
+## How to Run
+
+**Prerequisites:** Node >= 22.11, Xcode (iOS) or Android Studio (Android), CocoaPods (iOS).
 
 ```sh
-# Using npm
+# 1. Install JS dependencies
+npm install
+
+# 2. iOS — install native pods (first run or after native dep changes)
+bundle install
+bundle exec pod install
+
+# 3. Start Metro
 npm start
 
-# OR using Yarn
-yarn start
-```
-
-## Step 2: Build and run your app
-
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
-
-```sh
-# Using npm
+# 4. Run on device/simulator (in a separate terminal)
 npm run android
-
-# OR using Yarn
-yarn android
-```
-
-### iOS
-
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
-```
-
-Then, and every time you update your native dependencies, run:
-
-```sh
-bundle exec pod install
-```
-
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
+# or
 npm run ios
-
-# OR using Yarn
-yarn ios
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+---
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+## Demo Instructions
 
-## Step 3: Modify your app
+**Add a cow**
+1. Tap the **+** FAB on the Cow List screen.
+2. Fill in Ear Tag, Sex, Pen, Status, and Weight.
+3. Tap **Save** — the new cow appears at the bottom of the list.
+4. Try submitting with a duplicate ear tag to see the validation error.
 
-Now that you have successfully run the app, let's make changes!
+**Search & filter**
+1. Type an ear tag fragment (e.g. `ET-0`) in the search bar — the list filters in real time.
+2. Tap a **Status** chip (e.g. `In Treatment`) to filter by status.
+3. Tap a **Pen** chip (e.g. `Pen A`) to narrow further.
+4. Clear chips to reset.
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+**View details**
+1. Tap any cow row to open the Detail screen.
+2. Review the profile card (sex, pen, weight, dates).
+3. Scroll down to see the event timeline.
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+---
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+## Future Improvements
 
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+- **Backend integration** — REST or GraphQL API with JWT auth; replace AsyncStorage reads with API calls.
+- **Per-cow event log** — store events by cow ID; allow adding new events from the detail screen.
+- **Edit & delete** — swipe-to-delete on list rows; edit form pre-populated from existing record.
+- **Pagination / infinite scroll** — `onEndReached` + cursor-based pagination for large herds.
+- **Unit & integration tests** — Jest + React Native Testing Library for service logic and screen interactions.
+- **Improved UI/UX** — skeleton loaders, pull-to-refresh, haptic feedback, dark mode support.
