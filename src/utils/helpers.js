@@ -1,0 +1,9 @@
+export const formatDate = date =>
+  new Date(date).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+
+export const generateId = () =>
+  Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
